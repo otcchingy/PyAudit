@@ -153,7 +153,24 @@ def analyse_references(data):
     # TODO: cheques span 50 slips per book find potential missing ranges
 
     data = sorted(data)
-    print(data)
+
+    def find_missing():
+        groups = []
+        start = None
+        g = []
+        for i in data:
+            if len(g) > 0:
+                if abs(int(start) - int(i)) > 50:
+                    groups.append(g)
+                    start = i  # if next starts 1 or 6
+                    g = []
+            else:
+                if start.endswith('1') or start.endswith('6'):
+                    start = i
+                else:
+                    start = int(i) % 5
+
+            g.append(i)
 
     group = None
     previous = None
@@ -300,7 +317,7 @@ def search_cashbook(**kwargs):
         print('DATA: ', len(data))
 
     if description is not None and len(description) > 0:
-        data = data[filter_field_contains(data, 'description', payee)]
+        data = data[filter_field_contains(data, 'description', description)]
         print('DATA: ', len(data))
 
     if date is not None and len(date) > 0:
@@ -400,13 +417,13 @@ if __name__ == '__main__':
 
     args = args_parser()
 
-    args['config'] = 'config-2019.ini'
+    args['config'] = 'config-revenue.ini'
     args['analyse'] = True
-    # args['verbose'] = True
-    # args['output'] = 'account_2019.'
+    args['verbose'] = True
+    args['output'] = 'account_revenue_2021.'
     # args['pv_number'] = None  # [1,2,3]
     # args['reference'] = None  # ['016779', '016780', '693615', 'TRF/19/35']
-    # args['description'] = None  # ['salary']
+    # args['description'] = ['imprest']
     # args['payee'] = None  # ['fpmu']
     # args['search'] = ['2019-12']
     # args['date'] = ['gt:09/05/2019 and lt:05/09/2019', 'or', 'eq:12/12/2019']
@@ -512,7 +529,7 @@ if __name__ == '__main__':
                         error, duplicate, missing = pv_analysis
                         file.write('# PV Analysis\n')
                         file.write('Error:\n')
-                        file.write(', '.join([str(i) for i in error])+'\n')
+                        file.write(', '.join([str(i) for i in error]) + '\n')
                         if len(error) > 0:
                             for index, i in search_cashbook(data=results, pv_number=error).iterrows():
                                 print('[$]', index, i['date'], i['pv-number'], i['reference'], i['payee'], i['credit'],
@@ -520,7 +537,7 @@ if __name__ == '__main__':
                         file.write('\n\n')
 
                         file.write('Duplicate:\n')
-                        file.write(', '.join([str(i) for i in duplicate])+'\n')
+                        file.write(', '.join([str(i) for i in duplicate]) + '\n')
                         if len(duplicate) > 0:
                             for index, i in search_cashbook(data=results, pv_number=duplicate).iterrows():
                                 print('[$]', index, i['date'], i['pv-number'], i['reference'], i['payee'], i['credit'],
@@ -535,14 +552,14 @@ if __name__ == '__main__':
                         error, duplicate, missing = reference_analysis
                         file.write('# Reference Analysis\n')
                         file.write('Error:\n')
-                        file.write(', '.join([str(i) for i in error])+'\n')
+                        file.write(', '.join([str(i) for i in error]) + '\n')
                         if len(error) > 0:
                             for index, i in search_cashbook(data=results, reference=error).iterrows():
                                 print('[$]', index, i['date'], i['pv-number'], i['reference'], i['payee'], i['credit'],
                                       i['debit'], i['description'], file=file)
                         file.write('\n\n')
                         file.write('Duplicate:\n')
-                        file.write(', '.join([str(i) for i in duplicate])+'\n')
+                        file.write(', '.join([str(i) for i in duplicate]) + '\n')
                         if len(duplicate) > 0:
                             for index, i in search_cashbook(data=results, reference=duplicate).iterrows():
                                 print('[$]', index, i['date'], i['pv-number'], i['reference'], i['payee'], i['credit'],
@@ -582,7 +599,11 @@ if __name__ == '__main__':
         if args['verbose']:
             print('\n\n')
 
-        if validate_non_empty_text(args['output']):
+        if validate_non_empty_text(args['output']) and not (
+                args['search'] is None and args['date'] is None and args['pv_number'] is None
+                and args['payee'] is None and args['reference'] is None and args['credit'] is None
+                and args['debit'] is None and args['balance'] is None and args['description'] is None):
+
             output_path = args['output'].strip()
 
             if output_path[-1] == '.':
